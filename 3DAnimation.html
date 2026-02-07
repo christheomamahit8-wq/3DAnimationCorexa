@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Modeling & Animation Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Splash Screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1s ease, transform 1s ease;
+        }
+        
+        .splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .logo-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .logo-letter {
+            position: absolute;
+            font-size: 120px;
+            font-weight: 900;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
+            letter-spacing: 10px;
+            opacity: 0;
+            transform: translateY(-100px);
+            background: linear-gradient(45deg, #00d4ff, #007acc, #00ff88);
+            -webkit-background-clip: text;
+            background-clip: text;
+            filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.5));
+        }
+        
+        .studio-text {
+            font-size: 40px;
+            font-weight: 300;
+            color: #00d4ff;
+            margin-top: 20px;
+            opacity: 0;
+            transform: translateX(100px);
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background-color: #333;
+            margin-top: 50px;
+            border-radius: 2px;
+            overflow: hidden;
+            opacity: 0;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.7);
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #aaa;
+            opacity: 0;
+        }
+        
+        .splash-subtitle {
+            color: #888;
+            font-size: 18px;
+            margin-top: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        /* Top Bar */
+        .top-bar {
+            background-color: #2d2d30;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            border-bottom: 1px solid #3e3e42;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        
+        /* Main Container */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 22px);
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        
+        /* Sidebar - Tools */
+        .sidebar {
+            width: 60px;
+            background-color: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+            transform: translateX(-100px);
+            opacity: 0;
+        }
+        
+        .tool-btn {
+            width: 44px;
+            height: 44px;
+            background-color: #2d2d30;
+            border: none;
+            color: #d4d4d4;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            transform: scale(0);
+        }
+        
+        .tool-btn:hover {
+            background-color: #3e3e42;
+        }
+        
+        .tool-btn.active {
+            background-color: #007acc;
+            color: white;
+        }
+        
+        .tool-separator {
+            width: 70%;
+            height: 1px;
+            background-color: #3e3e42;
+            margin: 10px 0;
+            transform: scaleX(0);
+        }
+        
+        /* Left Panel - Object Properties */
+        .left-panel {
+            width: 280px;
+            background-color: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100px);
+            opacity: 0;
+        }
+        
+        .panel-header {
+            padding: 12px;
+            background-color: #2d2d30;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        /* Main Content - 3D Editor */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #1c1c1c;
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        
+        /* Editor Header */
+        .editor-header {
+            height: 40px;
+            background-color: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        
+        .mode-selector {
+            display: flex;
+            background-color: #3e3e42;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .mode-btn {
+            padding: 6px 12px;
+            background: none;
+            border: none;
+            color: #d4d4d4;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .mode-btn.active {
+            background-color: #007acc;
+            color: white;
+        }
+        
+        .header-controls {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .header-btn {
+            padding: 6px 12px;
+            background-color: #3e3e42;
+            border: none;
+            border-radius: 3px;
+            color: #d4d4d4;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-btn i {
+            margin-right: 5px;
+        }
+        
+        /* 3D Viewport Container */
+        .viewport-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #viewport {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .viewport-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .viewport-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(30, 30, 30, 0.8);
+            padding: 8px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        .viewport-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(60, 60, 60, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(60, 60, 60, 0.3) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            opacity: 0;
+        }
+        
+        /* Right Panel - Material & Animation */
+        .right-panel {
+            width: 320px;
+            background-color: #252526;
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateX(100px);
+            opacity: 0;
+        }
+        
+        .right-panel h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            transform: translateX(50px);
+            opacity: 0;
+        }
+        
+        /* Panel untuk karakter dan animasi */
+        .character-panel {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transform: translateX(30px);
+            opacity: 0;
+        }
+        
+        .character-panel h3 {
+            margin-top: 0;
+            color: #00d4ff;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        /* Bottom Panel - Timeline */
+        .bottom-panel {
+            height: 180px;
+            background-color: #252526;
+            border-top: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        
+        /* Property Groups */
+        .property-group {
+            margin-bottom: 15px;
+            background-color: #2d2d30;
+            border-radius: 3px;
+            overflow: hidden;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        
+        .property-header {
+            padding: 10px 12px;
+            background-color: #3e3e42;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .property-content {
+            padding: 12px;
+        }
+        
+        .property-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .property-label {
+            width: 100px;
+            font-size: 13px;
+            color: #9e9e9e;
+        }
+        
+        .property-input {
+            flex: 1;
+            padding: 6px 8px;
+            background-color: #3e3e42;
+            border: 1px solid #555;
+            color: #d4d4d4;
+            border-radius: 3px;
+        }
+        
+        .property-slider {
+            flex: 1;
+            height: 20px;
+        }
+        
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        /* Material Library */
+        .material-library {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .material-item {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .material-item.selected {
+            border-color: #007acc;
+        }
+        
+        /* Timeline */
+        .timeline-header {
+            padding: 8px 12px;
+            background-color: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .timeline-container {
+            flex: 1;
+            position: relative;
+            overflow-x: auto;
+            padding: 10px;
+        }
+        
+        .timeline-track {
+            height: 60px;
+            background-color: #2d2d30;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .timeline-scrubber {
+            position: absolute;
+            top: 0;
+            left: 100px;
+            width: 2px;
+            height: 100%;
+            background-color: #ffcc00;
+            pointer-events: none;
+            opacity: 0;
+        }
+        
+        .timeline-keyframe {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background-color: #007acc;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(-50%) scale(0);
+        }
+        
+        /* Modal Windows */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: #252526;
+            width: 500px;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-header {
+            padding: 15px;
+            background-color: #007acc;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            padding: 15px;
+            background-color: #2d2d30;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .modal-btn {
+            padding: 8px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .modal-btn.primary {
+            background-color: #007acc;
+            color: white;
+        }
+        
+        .modal-btn.secondary {
+            background-color: #3e3e42;
+            color: #d4d4d4;
+        }
+        
+        /* Asset Browser */
+        .asset-browser {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .asset-item {
+            background-color: #2d2d30;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .asset-item:hover {
+            transform: translateY(-3px);
+        }
+        
+        .asset-thumb {
+            width: 100%;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: #9cdcfe;
+        }
+        
+        .asset-name {
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        /* Footer */
+        .footer {
+            height: 24px;
+            background-color: #2d2d30;
+            border-top: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .footer-left, .footer-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .footer-item {
+            margin-right: 15px;
+            color: #9e9e9e;
+        }
+        
+        /* Transform Gizmo */
+        .gizmo {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            width: 100px;
+            height: 100px;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0);
+        }
+        
+        .axis {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        
+        .axis-x {
+            background-color: #ff3333;
+            top: 35px;
+            left: 35px;
+        }
+        
+        .axis-y {
+            background-color: #33cc33;
+            top: 0;
+            left: 35px;
+        }
+        
+        .axis-z {
+            background-color: #3366ff;
+            top: 35px;
+            left: 70px;
+        }
+        
+        /* Tombol dan kontrol dari HTML kedua */
+        .control-btn {
+            background: #444; 
+            color: white; 
+            border: none; 
+            padding: 8px;
+            border-radius: 4px; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-bottom: 5px;
+            transform: scale(0);
+        }
+        
+        .control-btn:hover { 
+            background: #555; 
+        }
+        
+        .control-btn.primary { 
+            background: #007bff; 
+        }
+        
+        .control-label {
+            display: block; 
+            font-size: 12px; 
+            margin: 10px 0 5px; 
+            color: #aaa;
+        }
+        
+        .control-slider { 
+            width: 100%; 
+        }
+        
+        .color-input { 
+            width: 100%; 
+            height: 30px; 
+            border: none; 
+            cursor: pointer; 
+            background: transparent;
+        }
+        
+        /* Info box */
+        .info-box {
+            position: absolute; 
+            bottom: 10px; 
+            left: 10px;
+            background: rgba(0,0,0,0.5); 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            font-size: 12px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        /* Panel transformasi objek */
+        .transform-panel {
+            background: #333; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 15px;
+            transform: translateX(30px);
+            opacity: 0;
+        }
+        
+        /* Panel animasi karakter */
+        .animation-panel {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            transform: translateX(30px);
+            opacity: 0;
+        }
+        
+        /* Glow effect untuk logo */
+        .glow-effect {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,212,255,0.3) 0%, rgba(0,212,255,0.1) 30%, transparent 70%);
+            filter: blur(40px);
+            z-index: -1;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="glow-effect" id="glowEffect"></div>
+        <div class="logo-container">
+            <div class="logo-letter" id="letterC">C</div>
+            <div class="logo-letter" id="letterO">O</div>
+            <div class="logo-letter" id="letterR">R</div>
+            <div class="logo-letter" id="letterE">E</div>
+            <div class="logo-letter" id="letterX">X</div>
+            <div class="logo-letter" id="letterA">A</div>
+        </div>
+        <div class="studio-text" id="studioText">Studio</div>
+        <div class="splash-subtitle" id="splashSubtitle">3D Modeling & Animation</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+        <div class="loading-text" id="loadingText">Initializing 3D Engine...</div>
+    </div>
+    
+    <!-- Top Bar -->
+    <div class="top-bar" id="topBar">
+        <span>3D Modeling Studio - Edit Mode - Project: My_3D_Model</span>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="main-container" id="mainContainer">
+        <!-- Left Sidebar - Tools -->
+        <div class="sidebar" id="sidebar">
+            <button class="tool-btn active" id="select-tool" title="Select">
+                <i class="fas fa-mouse-pointer"></i>
+            </button>
+            <button class="tool-btn" id="move-tool" title="Move">
+                <i class="fas fa-arrows-alt"></i>
+            </button>
+            <button class="tool-btn" id="rotate-tool" title="Rotate">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="tool-btn" id="scale-tool" title="Scale">
+                <i class="fas fa-expand-alt"></i>
+            </button>
+            
+            <div class="tool-separator" id="toolSeparator1"></div>
+            
+            <button class="tool-btn" id="cube-tool" title="Add Cube">
+                <i class="fas fa-cube"></i>
+            </button>
+            <button class="tool-btn" id="sphere-tool" title="Add Sphere">
+                <i class="fas fa-globe"></i>
+            </button>
+            <button class="tool-btn" id="cylinder-tool" title="Add Cylinder">
+                <i class="fas fa-database"></i>
+            </button>
+            <button class="tool-btn" id="plane-tool" title="Add Plane">
+                <i class="fas fa-square"></i>
+            </button>
+            
+            <div class="tool-separator" id="toolSeparator2"></div>
+            
+            <button class="tool-btn" id="extrude-tool" title="Extrude">
+                <i class="fas fa-angle-double-up"></i>
+            </button>
+            <button class="tool-btn" id="bevel-tool" title="Bevel">
+                <i class="fas fa-chart-area"></i>
+            </button>
+            <button class="tool-btn" id="cut-tool" title="Cut">
+                <i class="fas fa-cut"></i>
+            </button>
+            <button class="tool-btn" id="merge-tool" title="Merge">
+                <i class="fas fa-object-group"></i>
+            </button>
+            
+            <div class="tool-separator" id="toolSeparator3"></div>
+            
+            <button class="tool-btn" id="paint-tool" title="Paint">
+                <i class="fas fa-paint-brush"></i>
+            </button>
+            <button class="tool-btn" id="texture-tool" title="Texture">
+                <i class="fas fa-image"></i>
+            </button>
+            <button class="tool-btn" id="light-tool" title="Add Light">
+                <i class="fas fa-lightbulb"></i>
+            </button>
+            <button class="tool-btn" id="camera-tool" title="Add Camera">
+                <i class="fas fa-camera"></i>
+            </button>
+        </div>
+        
+        <!-- Left Panel - Object Properties -->
+        <div class="left-panel" id="leftPanel">
+            <div class="panel-header">
+                <span>Object Properties</span>
+                <button class="header-btn" id="reset-transform">Reset</button>
+            </div>
+            <div class="panel-content">
+                <div class="property-group" id="propertyTransform">
+                    <div class="property-header">
+                        Transform
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="property-content">
+                        <div class="property-row">
+                            <span class="property-label">Position</span>
+                            <input type="number" class="property-input" id="pos-x" value="0" step="0.1">
+                            <input type="number" class="property-input" id="pos-y" value="0" step="0.1">
+                            <input type="number" class="property-input" id="pos-z" value="0" step="0.1">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Rotation</span>
+                            <input type="number" class="property-input" id="rot-x" value="0" step="1">
+                            <input type="number" class="property-input" id="rot-y" value="0" step="1">
+                            <input type="number" class="property-input" id="rot-z" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Scale</span>
+                            <input type="number" class="property-input" id="scale-x" value="1" step="0.1">
+                            <input type="number" class="property-input" id="scale-y" value="1" step="0.1">
+                            <input type="number" class="property-input" id="scale-z" value="1" step="0.1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="property-group" id="propertyGeometry">
+                    <div class="property-header">
+                        Geometry
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="property-content">
+                        <div class="property-row">
+                            <span class="property-label">Vertices</span>
+                            <span class="property-input" id="vertex-count">24</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Faces</span>
+                            <span class="property-input" id="face-count">12</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Subdivisions</span>
+                            <input type="range" class="property-slider" id="subdivisions" min="0" max="5" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="property-group" id="propertyObjectList">
+                    <div class="property-header">
+                        Object List
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="property-content">
+                        <div style="max-height: 150px; overflow-y: auto;">
+                            <div class="object-item" style="padding: 8px; background-color: #094771; margin-bottom: 4px; border-radius: 3px;">
+                                <i class="fas fa-cube"></i> Cube_01
+                            </div>
+                            <div class="object-item" style="padding: 8px; background-color: #2d2d30; margin-bottom: 4px; border-radius: 3px;">
+                                <i class="fas fa-lightbulb"></i> Light_01
+                            </div>
+                            <div class="object-item" style="padding: 8px; background-color: #2d2d30; margin-bottom: 4px; border-radius: 3px;">
+                                <i class="fas fa-camera"></i> Camera_01
+                            </div>
+                            <div class="object-item" style="padding: 8px; background-color: #2d2d30; margin-bottom: 4px; border-radius: 3px;">
+                                <i class="fas fa-globe"></i> Sphere_01
+                            </div>
+                        </div>
+                        <button class="header-btn" style="width: 100%; margin-top: 10px;" id="add-object-btn">Add Object</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content - 3D Editor -->
+        <div class="main-content" id="mainContent">
+            <!-- Editor Header -->
+            <div class="editor-header">
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="mode-object">Object</button>
+                    <button class="mode-btn" id="mode-edit">Edit</button>
+                    <button class="mode-btn" id="mode-sculpt">Sculpt</button>
+                    <button class="mode-btn" id="mode-texture">Texture</button>
+                </div>
+                
+                <div class="header-controls">
+                    <button class="header-btn" id="save-btn">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button class="header-btn" id="import-btn">
+                        <i class="fas fa-file-import"></i> Import
+                    </button>
+                    <button class="header-btn" id="export-btn">
+                        <i class="fas fa-file-export"></i> Export
+                    </button>
+                    <button class="header-btn" id="render-btn">
+                        <i class="fas fa-camera"></i> Render
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 3D Viewport -->
+            <div class="viewport-container">
+                <div id="viewport"></div>
+                <div class="viewport-overlay">
+                    <div class="viewport-grid" id="viewportGrid"></div>
+                    <div class="viewport-info" id="viewportInfo">
+                        Polygons: 1,240 | Selected: Cube_01 | Mode: Object
+                    </div>
+                    <div class="gizmo" id="gizmo">
+                        <div class="axis axis-x">X</div>
+                        <div class="axis axis-y">Y</div>
+                        <div class="axis axis-z">Z</div>
+                    </div>
+                    <div class="info-box" id="infoBox">
+                        Klik kiri: Pilih | Klik kanan/Geser: Putar Kamera
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Karakter & Animasi -->
+        <div class="right-panel" id="rightPanel">
+            <h2>Karakter & Animasi</h2>
+            
+            <!-- Panel Tambah Objek -->
+            <div class="character-panel" id="characterPanel">
+                <h3>Tambah Objek</h3>
+                <button class="control-btn" onclick="addObject('box')" id="btnBox">
+                    Tambah Kotak
+                </button>
+                <button class="control-btn" onclick="addObject('sphere')" id="btnSphere">
+                    Tambah Bola
+                </button>
+                <button class="control-btn" onclick="addObject('cone')" id="btnCone">
+                    Tambah Kerucut
+                </button>
+            </div>
+            
+            <!-- Panel Transformasi Objek -->
+            <div id="transform-panel" class="transform-panel">
+                <h3>Transformasi Objek</h3>
+                <label class="control-label">Warna</label>
+                <input type="color" id="objColor" class="color-input" value="#007acc">
+                
+                <label class="control-label">Posisi X</label>
+                <input type="range" id="posX" class="control-slider" min="-5" max="5" step="0.1" value="0">
+                
+                <label class="control-label">Posisi Y</label>
+                <input type="range" id="posY" class="control-slider" min="0" max="5" step="0.1" value="0.5">
+                
+                <label class="control-label">Posisi Z</label>
+                <input type="range" id="posZ" class="control-slider" min="-5" max="5" step="0.1" value="0">
+                
+                <label class="control-label">Skala</label>
+                <input type="range" id="objScale" class="control-slider" min="0.1" max="3" step="0.1" value="1">
+                
+                <button class="control-btn primary" style="margin-top:10px" onclick="deleteObject()" id="btnDelete">
+                    Hapus Objek
+                </button>
+            </div>
+            
+            <!-- Panel Animasi -->
+            <div class="animation-panel" id="animationPanel">
+                <h3>Kontrol Animasi</h3>
+                <label class="control-label">Kecepatan Animasi</label>
+                <input type="range" id="animSpeed" class="control-slider" min="0" max="2" step="0.1" value="1">
+                
+                <label class="control-label">Frame Saat Ini</label>
+                <input type="range" id="currentFrame" class="control-slider" min="0" max="100" step="1" value="0">
+                
+                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                    <button class="control-btn" onclick="playAnimation()" id="btnPlay">
+                        <i class="fas fa-play"></i> Play
+                    </button>
+                    <button class="control-btn" onclick="pauseAnimation()" id="btnPause">
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                    <button class="control-btn" onclick="stopAnimation()" id="btnStop">
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                </div>
+                
+                <button class="control-btn" style="margin-top: 10px;" onclick="addKeyframe()" id="btnKeyframe">
+                    <i class="fas fa-key"></i> Tambah Keyframe
+                </button>
+            </div>
+            
+            <p style="font-size: 11px; color: #666; margin-top: 15px;">
+                Klik objek di layar untuk mengedit
+            </p>
+        </div>
+    </div>
+    
+    <!-- Bottom Panel - Timeline -->
+    <div class="bottom-panel" id="bottomPanel">
+        <div class="timeline-header">
+            Timeline <span style="float: right;">Frame: <span id="current-frame-display">0</span></span>
+        </div>
+        <div class="timeline-container">
+            <div class="timeline-track" id="timelineTrack1">
+                <div class="timeline-scrubber" id="timelineScrubber"></div>
+                <div class="timeline-keyframe" id="keyframe1" style="left: 0px;"></div>
+                <div class="timeline-keyframe" id="keyframe2" style="left: 50px;"></div>
+                <div class="timeline-keyframe" id="keyframe3" style="left: 100px;"></div>
+                <div class="timeline-keyframe" id="keyframe4" style="left: 150px;"></div>
+            </div>
+            <div class="timeline-track" id="timelineTrack2">
+                <div class="timeline-keyframe" id="keyframe5" style="left: 30px; background-color: #cc3333;"></div>
+                <div class="timeline-keyframe" id="keyframe6" style="left: 80px; background-color: #cc3333;"></div>
+                <div class="timeline-keyframe" id="keyframe7" style="left: 120px; background-color: #cc3333;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer" id="footer">
+        <div class="footer-left">
+            <span class="footer-item">3D Edit Mode</span>
+            <span class="footer-item">Polycount: <span id="polycount-display">1,240</span></span>
+            <span class="footer-item">Memory: 256MB</span>
+        </div>
+        <div class="footer-right">
+            <span class="footer-item" id="position-display">X: 0.00 Y: 0.00 Z: 0.00</span>
+            <span class="footer-item">FPS: <span id="fps-display">60</span></span>
+        </div>
+    </div>
+    
+    <!-- Modal Windows -->
+    <div class="modal" id="import-modal">
+        <!-- Modal content tetap sama -->
+    </div>
+    
+    <script>
+        // ANIMASI SPLASH SCREEN
+        document.addEventListener('DOMContentLoaded', function() {
+            const splashScreen = document.getElementById('splashScreen');
+            const glowEffect = document.getElementById('glowEffect');
+            const loadingProgress = document.getElementById('loadingProgress');
+            const loadingText = document.getElementById('loadingText');
+            const letters = ['C', 'O', 'R', 'E', 'X', 'A'];
+            const studioText = document.getElementById('studioText');
+            const splashSubtitle = document.getElementById('splashSubtitle');
+            
+            // Animasi glow effect
+            setTimeout(() => {
+                glowEffect.style.opacity = '1';
+                glowEffect.style.transition = 'opacity 1s ease';
+            }, 300);
+            
+            // Animasi huruf "Corexa" dari berbagai arah
+            letters.forEach((letter, index) => {
+                const letterElement = document.getElementById(`letter${letter}`);
+                let startX, startY;
+                
+                // Atur arah masuk yang berbeda untuk setiap huruf
+                switch(index) {
+                    case 0: // C - dari atas
+                        startX = 0;
+                        startY = -200;
+                        break;
+                    case 1: // O - dari kiri
+                        startX = -200;
+                        startY = 0;
+                        break;
+                    case 2: // R - dari bawah
+                        startX = 0;
+                        startY = 200;
+                        break;
+                    case 3: // E - dari kanan
+                        startX = 200;
+                        startY = 0;
+                        break;
+                    case 4: // X - dari kiri atas
+                        startX = -200;
+                        startY = -200;
+                        break;
+                    case 5: // A - dari kanan bawah
+                        startX = 200;
+                        startY = 200;
+                        break;
+                }
+                
+                // Atur posisi awal
+                letterElement.style.transform = `translate(${startX}px, ${startY}px) rotate(${Math.random() * 360}deg) scale(0)`;
+                
+                // Animasi masuk dengan delay berbeda
+                setTimeout(() => {
+                    letterElement.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    letterElement.style.opacity = '1';
+                    letterElement.style.transform = 'translate(0, 0) rotate(0deg) scale(1)';
+                    
+                    // Tambahkan efek bounce kecil
+                    setTimeout(() => {
+                        letterElement.style.transform = 'translate(0, 0) rotate(0deg) scale(1.1)';
+                        setTimeout(() => {
+                            letterElement.style.transform = 'translate(0, 0) rotate(0deg) scale(1)';
+                        }, 100);
+                    }, 800);
+                }, 100 + (index * 150));
+            });
+            
+            // Animasi loading bar
+            setTimeout(() => {
+                document.querySelector('.loading-bar').style.opacity = '1';
+                document.querySelector('.loading-bar').style.transition = 'opacity 0.5s ease';
+                
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10 + 5;
+                    if (progress > 100) {
+                        progress = 100;
+                        clearInterval(progressInterval);
+                        
+                        // Update loading text
+                        setTimeout(() => {
+                            loadingText.textContent = 'Loading 3D assets...';
+                            setTimeout(() => {
+                                loadingText.textContent = 'Initializing scene...';
+                                setTimeout(() => {
+                                    loadingText.textContent = 'Ready!';
+                                }, 800);
+                            }, 800);
+                        }, 300);
+                    }
+                    loadingProgress.style.width = `${progress}%`;
+                }, 150);
+            }, 1200);
+            
+            // Animasi "Studio" dari kanan
+            setTimeout(() => {
+                studioText.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                studioText.style.opacity = '1';
+                studioText.style.transform = 'translateX(0)';
+                
+                // Animasi subtitle
+                setTimeout(() => {
+                    splashSubtitle.style.transition = 'all 0.8s ease';
+                    splashSubtitle.style.opacity = '1';
+                    splashSubtitle.style.transform = 'translateY(0)';
+                }, 400);
+            }, 1800);
+            
+            // Animasi loading text
+            setTimeout(() => {
+                loadingText.style.transition = 'all 0.5s ease';
+                loadingText.style.opacity = '1';
+            }, 2000);
+            
+            // Sembunyikan splash screen dan tampilkan aplikasi utama
+            setTimeout(() => {
+                // Animasi menghilangkan splash screen
+                splashScreen.style.opacity = '0';
+                splashScreen.style.transform = 'scale(1.1)';
+                
+                // Tampilkan aplikasi utama dengan animasi
+                setTimeout(() => {
+                    splashScreen.classList.add('hidden');
+                    
+                    // Animasi masuk untuk semua komponen utama
+                    animateMainApp();
+                }, 1000);
+            }, 3500);
+        });
+        
+        // Fungsi untuk animasi masuk aplikasi utama
+        function animateMainApp() {
+            // Top bar
+            const topBar = document.getElementById('topBar');
+            setTimeout(() => {
+                topBar.style.transition = 'all 0.6s ease';
+                topBar.style.opacity = '1';
+                topBar.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Main container
+            const mainContainer = document.getElementById('mainContainer');
+            setTimeout(() => {
+                mainContainer.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                mainContainer.style.opacity = '1';
+                mainContainer.style.transform = 'scale(1)';
+            }, 300);
+            
+            // Sidebar
+            const sidebar = document.getElementById('sidebar');
+            setTimeout(() => {
+                sidebar.style.transition = 'all 0.7s ease';
+                sidebar.style.opacity = '1';
+                sidebar.style.transform = 'translateX(0)';
+                
+                // Animasi tool buttons
+                const toolButtons = document.querySelectorAll('.tool-btn');
+                toolButtons.forEach((btn, index) => {
+                    setTimeout(() => {
+                        btn.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        btn.style.transform = 'scale(1)';
+                    }, 400 + (index * 50));
+                });
+                
+                // Animasi tool separators
+                const separators = document.querySelectorAll('.tool-separator');
+                separators.forEach((sep, index) => {
+                    setTimeout(() => {
+                        sep.style.transition = 'all 0.5s ease';
+                        sep.style.transform = 'scaleX(1)';
+                    }, 800 + (index * 100));
+                });
+            }, 500);
+            
+            // Left panel
+            const leftPanel = document.getElementById('leftPanel');
+            setTimeout(() => {
+                leftPanel.style.transition = 'all 0.7s ease';
+                leftPanel.style.opacity = '1';
+                leftPanel.style.transform = 'translateX(0)';
+                
+                // Animasi property groups
+                const propertyGroups = ['propertyTransform', 'propertyGeometry', 'propertyObjectList'];
+                propertyGroups.forEach((id, index) => {
+                    const group = document.getElementById(id);
+                    setTimeout(() => {
+                        group.style.transition = 'all 0.6s ease';
+                        group.style.opacity = '1';
+                        group.style.transform = 'translateY(0)';
+                    }, 600 + (index * 150));
+                });
+            }, 600);
+            
+            // Main content
+            const mainContent = document.getElementById('mainContent');
+            setTimeout(() => {
+                mainContent.style.transition = 'all 0.7s ease';
+                mainContent.style.opacity = '1';
+                mainContent.style.transform = 'scale(1)';
+                
+                // Animasi viewport grid
+                const viewportGrid = document.getElementById('viewportGrid');
+                setTimeout(() => {
+                    viewportGrid.style.transition = 'opacity 1s ease';
+                    viewportGrid.style.opacity = '1';
+                }, 800);
+                
+                // Animasi viewport info
+                const viewportInfo = document.getElementById('viewportInfo');
+                setTimeout(() => {
+                    viewportInfo.style.transition = 'all 0.6s ease';
+                    viewportInfo.style.opacity = '1';
+                    viewportInfo.style.transform = 'translateY(0)';
+                }, 900);
+                
+                // Animasi gizmo
+                const gizmo = document.getElementById('gizmo');
+                setTimeout(() => {
+                    gizmo.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    gizmo.style.opacity = '1';
+                    gizmo.style.transform = 'scale(1)';
+                }, 1000);
+                
+                // Animasi info box
+                const infoBox = document.getElementById('infoBox');
+                setTimeout(() => {
+                    infoBox.style.transition = 'all 0.6s ease';
+                    infoBox.style.opacity = '1';
+                    infoBox.style.transform = 'translateY(0)';
+                }, 1100);
+            }, 700);
+            
+            // Right panel
+            const rightPanel = document.getElementById('rightPanel');
+            setTimeout(() => {
+                rightPanel.style.transition = 'all 0.7s ease';
+                rightPanel.style.opacity = '1';
+                rightPanel.style.transform = 'translateX(0)';
+                
+                // Animasi heading
+                const rightPanelHeading = rightPanel.querySelector('h2');
+                setTimeout(() => {
+                    rightPanelHeading.style.transition = 'all 0.6s ease';
+                    rightPanelHeading.style.opacity = '1';
+                    rightPanelHeading.style.transform = 'translateX(0)';
+                }, 800);
+                
+                // Animasi panel
+                const panels = ['characterPanel', 'transform-panel', 'animationPanel'];
+                panels.forEach((id, index) => {
+                    const panel = document.getElementById(id);
+                    setTimeout(() => {
+                        panel.style.transition = 'all 0.6s ease';
+                        panel.style.opacity = '1';
+                        panel.style.transform = 'translateX(0)';
+                        
+                        // Animasi buttons di dalam panel
+                        if (panel.id === 'characterPanel') {
+                            const buttons = ['btnBox', 'btnSphere', 'btnCone'];
+                            buttons.forEach((btnId, btnIndex) => {
+                                const btn = document.getElementById(btnId);
+                                setTimeout(() => {
+                                    btn.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                                    btn.style.transform = 'scale(1)';
+                                }, 300 + (btnIndex * 100));
+                            });
+                        }
+                        
+                        if (panel.id === 'animationPanel') {
+                            const animButtons = ['btnPlay', 'btnPause', 'btnStop', 'btnKeyframe'];
+                            animButtons.forEach((btnId, btnIndex) => {
+                                const btn = document.getElementById(btnId);
+                                setTimeout(() => {
+                                    btn.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                                    btn.style.transform = 'scale(1)';
+                                }, 300 + (btnIndex * 80));
+                            });
+                        }
+                        
+                        if (panel.id === 'transform-panel') {
+                            setTimeout(() => {
+                                const btnDelete = document.getElementById('btnDelete');
+                                btnDelete.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                                btnDelete.style.transform = 'scale(1)';
+                            }, 300);
+                        }
+                    }, 900 + (index * 200));
+                });
+            }, 800);
+            
+            // Bottom panel
+            const bottomPanel = document.getElementById('bottomPanel');
+            setTimeout(() => {
+                bottomPanel.style.transition = 'all 0.7s ease';
+                bottomPanel.style.opacity = '1';
+                bottomPanel.style.transform = 'translateY(0)';
+                
+                // Animasi timeline tracks
+                setTimeout(() => {
+                    const timelineTracks = ['timelineTrack1', 'timelineTrack2'];
+                    timelineTracks.forEach((id, index) => {
+                        const track = document.getElementById(id);
+                        track.style.transition = 'all 0.6s ease';
+                        track.style.opacity = '1';
+                        track.style.transform = 'translateY(0)';
+                        
+                        // Animasi keyframes
+                        const keyframes = [];
+                        if (id === 'timelineTrack1') {
+                            for (let i = 1; i <= 4; i++) keyframes.push(`keyframe${i}`);
+                        } else {
+                            for (let i = 5; i <= 7; i++) keyframes.push(`keyframe${i}`);
+                        }
+                        
+                        keyframes.forEach((keyframeId, kfIndex) => {
+                            const kf = document.getElementById(keyframeId);
+                            setTimeout(() => {
+                                kf.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                                kf.style.opacity = '1';
+                                kf.style.transform = 'translateY(-50%) scale(1)';
+                            }, 300 + (kfIndex * 100));
+                        });
+                    });
+                    
+                    // Animasi timeline scrubber
+                    const scrubber = document.getElementById('timelineScrubber');
+                    setTimeout(() => {
+                        scrubber.style.transition = 'all 0.6s ease';
+                        scrubber.style.opacity = '1';
+                    }, 800);
+                }, 300);
+            }, 900);
+            
+            // Footer
+            const footer = document.getElementById('footer');
+            setTimeout(() => {
+                footer.style.transition = 'all 0.7s ease';
+                footer.style.opacity = '1';
+                footer.style.transform = 'translateY(0)';
+            }, 1000);
+            
+            // Inisialisasi Three.js setelah animasi selesai
+            setTimeout(() => {
+                initThreeJS();
+                setupUIListeners();
+                animate();
+            }, 1200);
+        }
+        
+        // Initialize Three.js Scene
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let objects = [];
+        let selectedObject = null;
+        let isAnimating = false;
+        let frameCount = 0;
+        let lastTime = 0;
+        let fps = 60;
+        
+        function initThreeJS() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1c1c1c);
+            
+            // Create camera
+            const viewport = document.getElementById('viewport');
+            camera = new THREE.PerspectiveCamera(75, viewport.clientWidth / viewport.clientHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            viewport.appendChild(renderer.domElement);
+            
+            // Add orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Add grid helper
+            const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+            scene.add(gridHelper);
+            
+            // Add axes helper
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+            
+            // Create a default cube
+            createCube();
+            
+            // Initialize raycaster for object selection
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Handle click events for object selection
+            renderer.domElement.addEventListener('click', onCanvasClick);
+        }
+        
+        function createCube() {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x007acc,
+                roughness: 0.5,
+                metalness: 0
+            });
+            const cube = new THREE.Mesh(geometry, material);
+            cube.name = "Cube_01";
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            scene.add(cube);
+            objects.push(cube);
+            selectObject(cube);
+            updatePolycount();
+        }
+        
+        function createSphere() {
+            const geometry = new THREE.SphereGeometry(0.7, 32, 32);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xcc3333,
+                roughness: 0.3,
+                metalness: 0.2
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.name = "Sphere_01";
+            sphere.position.set(0, 0.7, 0);
+            sphere.castShadow = true;
+            sphere.receiveShadow = true;
+            scene.add(sphere);
+            objects.push(sphere);
+            selectObject(sphere);
+            updatePolycount();
+        }
+        
+        function createCone() {
+            const geometry = new THREE.ConeGeometry(0.7, 1.2, 32);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x33cc33,
+                roughness: 0.4,
+                metalness: 0
+            });
+            const cone = new THREE.Mesh(geometry, material);
+            cone.name = "Cone_01";
+            cone.position.set(0, 0.6, 0);
+            cone.castShadow = true;
+            cone.receiveShadow = true;
+            scene.add(cone);
+            objects.push(cone);
+            selectObject(cone);
+            updatePolycount();
+        }
+        
+        // Fungsi untuk menambah objek (dari HTML kedua)
+        window.addObject = function(type) {
+            if (type === 'box') createCube();
+            else if (type === 'sphere') createSphere();
+            else if (type === 'cone') createCone();
+        }
+        
+        function onCanvasClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects);
+            
+            if (intersects.length > 0) {
+                selectObject(intersects[0].object);
+            } else {
+                // Jika klik di area kosong, sembunyikan panel transform
+                document.getElementById('transform-panel').style.display = 'none';
+            }
+        }
+        
+        function selectObject(object) {
+            // Deselect previous object
+            if (selectedObject) {
+                selectedObject.material.emissive.setHex(selectedObject.userData.originalEmissive || 0x000000);
+            }
+            
+            // Select new object
+            selectedObject = object;
+            
+            // Store original emissive color and highlight selected object
+            if (object && object.material) {
+                object.userData.originalEmissive = object.material.emissive.getHex();
+                object.material.emissive.setHex(0x333333);
+                
+                // Update UI dengan data objek yang dipilih
+                updateObjectPropertiesUI();
+                
+                // Tampilkan panel transform
+                document.getElementById('transform-panel').style.display = 'block';
+                
+                // Update kontrol di panel kanan
+                document.getElementById('objColor').value = '#' + object.material.color.getHexString();
+                document.getElementById('posX').value = object.position.x;
+                document.getElementById('posY').value = object.position.y;
+                document.getElementById('posZ').value = object.position.z;
+                document.getElementById('objScale').value = object.scale.x;
+            }
+        }
+        
+        function updateObjectPropertiesUI() {
+            if (!selectedObject) return;
+            
+            // Update transform inputs di panel kiri
+            document.getElementById('pos-x').value = selectedObject.position.x.toFixed(2);
+            document.getElementById('pos-y').value = selectedObject.position.y.toFixed(2);
+            document.getElementById('pos-z').value = selectedObject.position.z.toFixed(2);
+            
+            const euler = new THREE.Euler().setFromQuaternion(selectedObject.quaternion, 'XYZ');
+            document.getElementById('rot-x').value = THREE.MathUtils.radToDeg(euler.x).toFixed(1);
+            document.getElementById('rot-y').value = THREE.MathUtils.radToDeg(euler.y).toFixed(1);
+            document.getElementById('rot-z').value = THREE.MathUtils.radToDeg(euler.z).toFixed(1);
+            
+            document.getElementById('scale-x').value = selectedObject.scale.x.toFixed(2);
+            document.getElementById('scale-y').value = selectedObject.scale.y.toFixed(2);
+            document.getElementById('scale-z').value = selectedObject.scale.z.toFixed(2);
+            
+            // Update vertex and face counts
+            if (selectedObject.geometry) {
+                document.getElementById('vertex-count').textContent = selectedObject.geometry.attributes.position.count;
+                document.getElementById('face-count').textContent = Math.floor(selectedObject.geometry.attributes.position.count / 3);
+            }
+            
+            // Update info viewport
+            const viewportInfo = document.querySelector('.viewport-info');
+            if (viewportInfo) {
+                viewportInfo.innerHTML = `Polygons: ${getTotalPolycount()} | Selected: ${selectedObject.name} | Mode: Object`;
+            }
+        }
+        
+        function getTotalPolycount() {
+            let total = 0;
+            objects.forEach(obj => {
+                if (obj.geometry && obj.geometry.attributes.position) {
+                    total += obj.geometry.attributes.position.count / 3;
+                }
+            });
+            return Math.floor(total);
+        }
+        
+        function updatePolycount() {
+            document.getElementById('polycount-display').textContent = getTotalPolycount().toLocaleString();
+        }
+        
+        function onWindowResize() {
+            const viewport = document.getElementById('viewport');
+            camera.aspect = viewport.clientWidth / viewport.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+        }
+        
+        // Fungsi untuk menghapus objek (dari HTML kedua)
+        window.deleteObject = function() {
+            if (!selectedObject) return;
+            
+            // Hapus dari scene
+            scene.remove(selectedObject);
+            
+            // Hapus dari array objects
+            const index = objects.indexOf(selectedObject);
+            if (index > -1) {
+                objects.splice(index, 1);
+            }
+            
+            // Reset selected object
+            selectedObject = null;
+            
+            // Sembunyikan panel transform
+            document.getElementById('transform-panel').style.display = 'none';
+            
+            // Update polycount
+            updatePolycount();
+        }
+        
+        // Fungsi animasi (dari HTML kedua)
+        window.playAnimation = function() {
+            isAnimating = true;
+        }
+        
+        window.pauseAnimation = function() {
+            isAnimating = false;
+        }
+        
+        window.stopAnimation = function() {
+            isAnimating = false;
+            frameCount = 0;
+            document.getElementById('currentFrame').value = 0;
+            document.getElementById('current-frame-display').textContent = '0';
+        }
+        
+        window.addKeyframe = function() {
+            if (!selectedObject) {
+                alert('Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            const currentFrame = parseInt(document.getElementById('currentFrame').value);
+            alert(`Keyframe ditambahkan pada frame ${currentFrame} untuk objek ${selectedObject.name}`);
+            
+            // Tambahkan keyframe visual di timeline
+            const timelineContainer = document.querySelector('.timeline-container');
+            const newKeyframe = document.createElement('div');
+            newKeyframe.className = 'timeline-keyframe';
+            newKeyframe.style.left = (currentFrame * 2) + 'px';
+            newKeyframe.style.backgroundColor = '#00cc00';
+            timelineContainer.appendChild(newKeyframe);
+        }
+        
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            // Hitung FPS
+            frameCount++;
+            if (time >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (time - lastTime));
+                frameCount = 0;
+                lastTime = time;
+                document.getElementById('fps-display').textContent = fps;
+            }
+            
+            // Update animasi jika sedang berjalan
+            if (isAnimating && selectedObject) {
+                const animSpeed = parseFloat(document.getElementById('animSpeed').value);
+                selectedObject.rotation.y += 0.01 * animSpeed;
+                
+                // Update frame display
+                const currentFrame = parseInt(document.getElementById('currentFrame').value);
+                const newFrame = (currentFrame + 1) % 101;
+                document.getElementById('currentFrame').value = newFrame;
+                document.getElementById('current-frame-display').textContent = newFrame;
+                
+                // Update timeline scrubber
+                const scrubber = document.querySelector('.timeline-scrubber');
+                if (scrubber) {
+                    scrubber.style.left = (newFrame * 2) + 'px';
+                }
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+            
+            // Update footer dengan posisi objek yang dipilih
+            const positionDisplay = document.getElementById('position-display');
+            if (selectedObject) {
+                positionDisplay.textContent = `X: ${selectedObject.position.x.toFixed(2)} Y: ${selectedObject.position.y.toFixed(2)} Z: ${selectedObject.position.z.toFixed(2)}`;
+            }
+        }
+        
+        // Setup UI Listeners (dari HTML kedua)
+        function setupUIListeners() {
+            // Kontrol warna
+            document.getElementById('objColor').addEventListener('input', (e) => {
+                if (selectedObject) {
+                    selectedObject.material.color.set(e.target.value);
+                    updateObjectPropertiesUI();
+                }
+            });
+            
+            // Kontrol posisi X
+            document.getElementById('posX').addEventListener('input', (e) => {
+                if (selectedObject) {
+                    selectedObject.position.x = parseFloat(e.target.value);
+                    updateObjectPropertiesUI();
+                }
+            });
+            
+            // Kontrol posisi Y
+            document.getElementById('posY').addEventListener('input', (e) => {
+                if (selectedObject) {
+                    selectedObject.position.y = parseFloat(e.target.value);
+                    updateObjectPropertiesUI();
+                }
+            });
+            
+            // Kontrol posisi Z
+            document.getElementById('posZ').addEventListener('input', (e) => {
+                if (selectedObject) {
+                    selectedObject.position.z = parseFloat(e.target.value);
+                    updateObjectPropertiesUI();
+                }
+            });
+            
+            // Kontrol skala
+            document.getElementById('objScale').addEventListener('input', (e) => {
+                if (selectedObject) {
+                    const s = parseFloat(e.target.value);
+                    selectedObject.scale.set(s, s, s);
+                    updateObjectPropertiesUI();
+                }
+            });
+            
+            // Kontrol frame
+            document.getElementById('currentFrame').addEventListener('input', (e) => {
+                const frame = parseInt(e.target.value);
+                document.getElementById('current-frame-display').textContent = frame;
+                
+                // Update timeline scrubber
+                const scrubber = document.querySelector('.timeline-scrubber');
+                if (scrubber) {
+                    scrubber.style.left = (frame * 2) + 'px';
+                }
+            });
+        }
+        
+        // DOM Elements dari HTML pertama
+        const importBtn = document.getElementById('import-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const importModal = document.getElementById('import-modal');
+        const exportModal = document.getElementById('export-modal');
+        const assetModal = document.getElementById('asset-library-modal');
+        const closeModalButtons = document.querySelectorAll('.close-modal');
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        const transformInputs = [
+            'pos-x', 'pos-y', 'pos-z',
+            'rot-x', 'rot-y', 'rot-z',
+            'scale-x', 'scale-y', 'scale-z'
+        ];
+        
+        // Tool selection dari HTML pertama
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                toolButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update viewport info
+                const viewportInfo = document.querySelector('.viewport-info');
+                if (viewportInfo) {
+                    const toolName = this.getAttribute('title');
+                    viewportInfo.innerHTML = `Polygons: ${getTotalPolycount()} | Selected: ${selectedObject ? selectedObject.name : 'None'} | Tool: ${toolName}`;
+                }
+            });
+        });
+        
+        // Mode selection
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                modeButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update viewport info
+                const viewportInfo = document.querySelector('.viewport-info');
+                if (viewportInfo) {
+                    const modeName = this.textContent;
+                    viewportInfo.innerHTML = `Polygons: ${getTotalPolycount()} | Selected: ${selectedObject ? selectedObject.name : 'None'} | Mode: ${modeName}`;
+                }
+            });
+        });
+        
+        // Transform inputs dari panel kiri
+        transformInputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('change', function() {
+                    if (!selectedObject) return;
+                    
+                    const value = parseFloat(this.value);
+                    
+                    if (id.startsWith('pos-')) {
+                        const axis = id.split('-')[1];
+                        selectedObject.position[axis] = value;
+                        
+                        // Update kontrol di panel kanan
+                        if (axis === 'x') document.getElementById('posX').value = value;
+                        if (axis === 'y') document.getElementById('posY').value = value;
+                        if (axis === 'z') document.getElementById('posZ').value = value;
+                    } else if (id.startsWith('rot-')) {
+                        const axis = id.split('-')[1];
+                        const euler = new THREE.Euler().setFromQuaternion(selectedObject.quaternion, 'XYZ');
+                        euler[axis] = THREE.MathUtils.degToRad(value);
+                        selectedObject.rotation.copy(euler);
+                    } else if (id.startsWith('scale-')) {
+                        const axis = id.split('-')[1];
+                        selectedObject.scale[axis] = value;
+                        
+                        // Update kontrol skala di panel kanan
+                        if (axis === 'x') document.getElementById('objScale').value = value;
+                    }
+                });
+            }
+        });
+        
+        // Reset transform
+        document.getElementById('reset-transform').addEventListener('click', function() {
+            if (!selectedObject) return;
+            
+            selectedObject.position.set(0, 0.5, 0);
+            selectedObject.rotation.set(0, 0, 0);
+            selectedObject.scale.set(1, 1, 1);
+            
+            updateObjectPropertiesUI();
+            
+            // Update kontrol di panel kanan
+            document.getElementById('posX').value = 0;
+            document.getElementById('posY').value = 0.5;
+            document.getElementById('posZ').value = 0;
+            document.getElementById('objScale').value = 1;
+        });
+        
+        // Add object button
+        document.getElementById('add-object-btn').addEventListener('click', function() {
+            // Buka modal asset library
+            assetModal.classList.add('active');
+        });
+        
+        // Modal controls
+        importBtn.addEventListener('click', () => {
+            importModal.classList.add('active');
+        });
+        
+        exportBtn.addEventListener('click', () => {
+            exportModal.classList.add('active');
+        });
+        
+        closeModalButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                importModal.classList.remove('active');
+                exportModal.classList.remove('active');
+                assetModal.classList.remove('active');
+            });
+        });
+        
+        // Click outside modal to close
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
